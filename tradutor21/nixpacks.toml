@@ -1,0 +1,23 @@
+[phases.setup]
+nixPkgs = ["tesseract", "poppler_utils"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "python backend.py"
+```
+
+**3. Confirme que o `requirements.txt`** existe e tem o conteúdo:
+```
+fastapi
+uvicorn
+python-multipart
+pypdf
+pdfplumber
+reportlab
+deep-translator
+tqdm
+pillow
+pdf2image
+pytesseract
