@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+pypdf
+pdfplumber
+reportlab
+deep-translator
+tqdm
+pillow
+pdf2image
+pytesseract

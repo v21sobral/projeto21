@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Translator Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0c0e14;
+      --surface: #12151d;
+      --panel:   #191d27;
+      --border:  #252a38;
+      --accent:  #e8c97e;
+      --blue:    #7eb8e8;
+      --green:   #7ee8a2;
+      --red:     #e87e7e;
+      --text:    #e8ecf5;
+      --muted:   #616880;
+      --font-d:  'Playfair Display', serif;
+      --font-b:  'DM Sans', sans-serif;
+      --font-m:  'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-b);
+      font-weight: 300;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* grain */
+    body::after {
+      content:'';position:fixed;inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events:none;z-index:999;
+    }
+
+    /* glows */
+    .g1,.g2{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0;}
+    .g1{width:700px;height:700px;background:radial-gradient(circle,rgba(232,201,126,.055) 0%,transparent 70%);top:-250px;left:-250px;}
+    .g2{width:550px;height:550px;background:radial-gradient(circle,rgba(126,184,232,.045) 0%,transparent 70%);bottom:-200px;right:-200px;}
+
+    .wrap {
+      position: relative; z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+
+    /* HEADER */
+    header {
+      padding: 64px 0 52px;
+      text-align: center;
+      animation: fd .7s ease both;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 100px; padding: 5px 16px 5px 10px;
+      font-family: var(--font-m); font-size: 11px; color: var(--accent);
+      letter-spacing: .08em; text-transform: uppercase; margin-bottom: 28px;
+    }
+    .badge .dot {
+      width:6px;height:6px;background:var(--accent);border-radius:50%;
+      animation: pulse 2s ease infinite;
+    }
+    h1 {
+      font-family: var(--font-d); font-size: clamp(2rem,5vw,3.4rem);
+      font-weight:700; line-height:1.13; letter-spacing:-.02em; margin-bottom:14px;
+    }
+    h1 em { font-style:italic; color:var(--accent); font-weight:400; }
+    .sub { color:var(--muted); font-size:15px; line-height:1.65; max-width:460px; margin:0 auto; }
+
+    /* CARD */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 22px; padding: 36px;
+      animation: fu .7s .1s ease both;
+    }
+
+    .section-label {
+      font-family:var(--font-m); font-size:10px; text-transform:uppercase;
+      letter-spacing:.12em; color:var(--muted); margin-bottom:22px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* DROP ZONE */
+    .drop {
+      border: 1.5px dashed var(--border); border-radius: 16px;
+      padding: 52px 24px; text-align:center; cursor:pointer;
+      position:relative; background:var(--panel);
+      transition: border-color .2s, background .2s;
+    }
+    .drop:hover, .drop.over { border-color:var(--accent); background:rgba(232,201,126,.04); }
+    .drop input { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+    .drop-ico { font-size:44px; margin-bottom:14px; display:block; }
+    .drop-main { font-size:15px; margin-bottom:6px; }
+    .drop-main u { color:var(--accent); text-decoration:underline; }
+    .drop-hint { font-size:12px; color:var(--muted); font-family:var(--font-m); }
+
+    .file-pill {
+      display:none; align-items:center; gap:14px;
+      background:rgba(232,201,126,.06); border:1px solid rgba(232,201,126,.18);
+      border-radius:12px; padding:13px 18px; margin-top:16px;
+    }
+    .file-pill.show { display:flex; }
+    .file-pill-ico { font-size:24px; }
+    .file-pill-name { font-family:var(--font-m); font-size:12px; color:var(--accent); word-break:break-all; }
+    .file-pill-size { font-size:11px; color:var(--muted); margin-top:2px; }
+    .file-pill-remove {
+      margin-left:auto; background:none; border:none; color:var(--muted);
+      cursor:pointer; font-size:18px; line-height:1; padding:4px; border-radius:6px;
+      transition:color .15s;
+    }
+    .file-pill-remove:hover { color:var(--red); }
+
+    /* FORM */
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+    @media(max-width:520px){ .grid2{ grid-template-columns:1fr; } }
+
+    .field { display:flex; flex-direction:column; gap:6px; }
+    label { font-size:10px; font-family:var(--font-m); text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+
+    select, input[type=number] {
+      background:var(--panel); border:1px solid var(--border); color:var(--text);
+      border-radius:10px; padding:10px 14px; font-size:14px; font-family:var(--font-b);
+      outline:none; appearance:none; transition:border-color .2s; width:100%;
+    }
+    select {
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23616880' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 14px center; padding-right:38px;
+    }
+    select:focus, input:focus { border-color:var(--accent); }
+
+    /* TOGGLE */
+    .tog-row {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:13px 0; border-top:1px solid var(--border);
+    }
+    .tog-text .t1 { font-size:13px; }
+    .tog-text .t2 { font-size:11px; color:var(--muted); margin-top:2px; }
+    .toggle { position:relative; width:40px; height:22px; flex-shrink:0; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .tslider {
+      position:absolute; inset:0; background:var(--border);
+      border-radius:100px; cursor:pointer; transition:background .2s;
+    }
+    .tslider::before {
+      content:''; position:absolute; width:16px; height:16px;
+      border-radius:50%; background:#fff; top:3px; left:3px; transition:transform .2s;
+    }
+    .toggle input:checked + .tslider { background:var(--accent); }
+    .toggle input:checked + .tslider::before { transform:translateX(18px); }
+
+    /* BUTTON */
+    .btn {
+      width:100%; padding:17px; margin-top:26px;
+      background:var(--accent); color:#0c0e14;
+      border:none; border-radius:13px; font-family:var(--font-b);
+      font-size:15px; font-weight:500; cursor:pointer;
+      transition:all .2s; display:flex; align-items:center; justify-content:center; gap:10px;
+    }
+    .btn:hover:not(:disabled) {
+      background:#f0d68e; transform:translateY(-2px);
+      box-shadow:0 10px 30px rgba(232,201,126,.2);
+    }
+    .btn:disabled { opacity:.35; cursor:not-allowed; transform:none; box-shadow:none; }
+
+    /* PROGRESS CARD */
+    #progressCard { display:none; margin-top:20px; }
+    #progressCard.show { display:block; animation: fu .4s ease both; }
+
+    .prog-header {
+      display:flex; align-items:center; gap:12px; margin-bottom:18px;
+    }
+    .spinner {
+      width:18px; height:18px; border:2px solid var(--border);
+      border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0;
+    }
+    .spinner.done { border-color:var(--green); animation:none; }
+    .spinner.err  { border-color:var(--red);   animation:none; }
+    #progTitle { font-size:14px; font-weight:500; }
+
+    .bar-track {
+      background:var(--border); border-radius:100px; height:5px; overflow:hidden; margin-bottom:18px;
+    }
+    .bar-fill {
+      height:100%; background:linear-gradient(90deg,var(--accent),var(--blue));
+      border-radius:100px; width:0%; transition:width .5s ease;
+    }
+    .bar-fill.done { background:var(--green); }
+    .bar-fill.err  { background:var(--red); }
+
+    .prog-stats {
+      display:flex; gap:24px; margin-bottom:18px;
+      font-family:var(--font-m); font-size:11px; color:var(--muted);
+    }
+    .stat-val { color:var(--text); font-size:18px; font-weight:500; display:block; margin-bottom:2px; }
+
+    .log {
+      background:var(--bg); border:1px solid var(--border); border-radius:10px;
+      padding:12px 14px; font-family:var(--font-m); font-size:11px;
+      color:var(--muted); line-height:1.9; max-height:180px; overflow-y:auto;
+    }
+    .log .lok  { color:var(--green); }
+    .log .lerr { color:var(--red); }
+    .log .linf { color:var(--blue); }
+
+    /* DOWNLOAD */
+    .btn-dl {
+      display:none; width:100%; padding:17px; margin-top:16px;
+      background:transparent; color:var(--green); border:1.5px solid var(--green);
+      border-radius:13px; font-family:var(--font-b); font-size:15px; font-weight:500;
+      cursor:pointer; transition:all .2s; align-items:center; justify-content:center; gap:10px;
+      text-decoration:none;
+    }
+    .btn-dl.show { display:flex; animation: fu .4s ease both; }
+    .btn-dl:hover { background:rgba(126,232,162,.07); transform:translateY(-2px); }
+
+    .btn-new {
+      display:none; width:100%; padding:13px; margin-top:10px;
+      background:transparent; color:var(--muted); border:1px solid var(--border);
+      border-radius:10px; font-family:var(--font-b); font-size:13px;
+      cursor:pointer; transition:all .15s;
+    }
+    .btn-new.show { display:block; }
+    .btn-new:hover { color:var(--text); border-color:var(--muted); }
+
+    /* ANIMATIONS */
+    @keyframes fd  { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:none} }
+    @keyframes fu  { from{opacity:0;transform:translateY(18px)}  to{opacity:1;transform:none} }
+    @keyframes spin{ to{transform:rotate(360deg)} }
+    @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:100px}
+  </style>
+</head>
+<body>
+
+<div class="g1"></div>
+<div class="g2"></div>
+
+<div class="wrap">
+
+  <header>
+    <div class="badge"><span class="dot"></span> PDF Translator Pro</div>
+    <h1>Traduza <em>qualquer PDF</em><br>direto no navegador</h1>
+    <p class="sub">Upload, configure e baixe — tradução com OCR integrado, suporte a livros inteiros.</p>
+  </header>
+
+  <!-- FORM CARD -->
+  <div class="card" id="formCard">
+    <div class="section-label">Arquivo</div>
+
+    <div class="drop" id="drop">
+      <input type="file" id="fileInput" accept=".pdf" />
+      <span class="drop-ico">📄</span>
+      <p class="drop-main">Arraste o PDF aqui ou <u>clique para selecionar</u></p>
+      <p class="drop-hint">Apenas .pdf · sem limite de páginas</p>
+    </div>
+
+    <div class="file-pill" id="filePill">
+      <span class="file-pill-ico">📑</span>
+      <div>
+        <div class="file-pill-name" id="pillName">—</div>
+        <div class="file-pill-size" id="pillSize">—</div>
+      </div>
+      <button class="file-pill-remove" id="removeFile" title="Remover">✕</button>
+    </div>
+
+    <div class="section-label" style="margin-top:28px;">Opções</div>
+
+    <div class="grid2">
+      <div class="field">
+        <label for="srcLang">Idioma de origem</label>
+        <select id="srcLang">
+          <option value="auto">🔍 Detectar automaticamente</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="zh-CN">🇨🇳 中文 (简体)</option>
+          <option value="zh-TW">🇹🇼 中文 (繁體)</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="ar">🇸🇦 العربية</option>
+          <option value="hi">🇮🇳 हिन्दी</option>
+          <option value="pt">🇧🇷 Português</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="tgtLang">Idioma de destino</label>
+        <select id="tgtLang">
+          <option value="pt" selected>🇧🇷 Português</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="zh-CN">🇨🇳 中文 (简体)</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="ar">🇸🇦 العربية</option>
+          <option value="hi">🇮🇳 हिन्दी</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="engine">Motor de tradução</label>
+        <select id="engine">
+          <option value="google">Google Translate (grátis)</option>
+          <option value="deepl">DeepL (requer DEEPL_API_KEY)</option>
+          <option value="libre">LibreTranslate (self-hosted)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="workers">Threads paralelas</label>
+        <input type="number" id="workers" value="4" min="1" max="16" />
+      </div>
+      <div class="field">
+        <label for="pageStart">Página inicial</label>
+        <input type="number" id="pageStart" value="1" min="1" />
+      </div>
+      <div class="field">
+        <label for="pageEnd">Página final (opcional)</label>
+        <input type="number" id="pageEnd" placeholder="todas" min="1" />
+      </div>
+    </div>
+
+    <div class="tog-row">
+      <div class="tog-text">
+        <div class="t1">Ativar OCR</div>
+        <div class="t2">Para PDFs escaneados ou baseados em imagem</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="useOcr" checked /><span class="tslider"></span></label>
+    </div>
+    <div class="tog-row">
+      <div class="tog-text">
+        <div class="t1">Salvar PDF com texto original</div>
+        <div class="t2">Gera um segundo arquivo com o conteúdo extraído</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="saveOrig" /><span class="tslider"></span></label>
+    </div>
+
+    <button class="btn" id="btnStart" disabled>
+      <span>⚡</span> Traduzir PDF
+    </button>
+  </div>
+
+  <!-- PROGRESS CARD -->
+  <div class="card" id="progressCard">
+    <div class="prog-header">
+      <div class="spinner" id="spinner"></div>
+      <span id="progTitle">Iniciando tradução…</span>
+    </div>
+
+    <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+
+    <div class="prog-stats">
+      <div>
+        <span class="stat-val" id="statPages">0</span>
+        páginas traduzidas
+      </div>
+      <div>
+        <span class="stat-val" id="statTotal">–</span>
+        total
+      </div>
+      <div>
+        <span class="stat-val" id="statPct">0%</span>
+        concluído
+      </div>
+    </div>
+
+    <div class="log" id="logBox"></div>
+
+    <a class="btn-dl" id="btnDl" href="#" download>
+      <span>⬇</span> <span id="dlLabel">Baixar PDF traduzido</span>
+    </a>
+
+    <button class="btn-new" id="btnNew">+ Traduzir outro PDF</button>
+  </div>
+
+</div>
+
+<script>
+  // ─── CONFIG ──────────────────────────────────────────────
+  // Backend rodando localmente. Mude se hospedou em outro lugar.
+  const API     = 'http://localhost:8000';
+  const POLL_MS = 1500;
+  // ─────────────────────────────────────────────────────────
+
+  const drop       = document.getElementById('drop');
+  const fileInput  = document.getElementById('fileInput');
+  const filePill   = document.getElementById('filePill');
+  const pillName   = document.getElementById('pillName');
+  const pillSize   = document.getElementById('pillSize');
+  const removeFile = document.getElementById('removeFile');
+  const btnStart   = document.getElementById('btnStart');
+  const formCard   = document.getElementById('formCard');
+  const progressCard = document.getElementById('progressCard');
+  const spinner    = document.getElementById('spinner');
+  const progTitle  = document.getElementById('progTitle');
+  const barFill    = document.getElementById('barFill');
+  const statPages  = document.getElementById('statPages');
+  const statTotal  = document.getElementById('statTotal');
+  const statPct    = document.getElementById('statPct');
+  const logBox     = document.getElementById('logBox');
+  const btnDl      = document.getElementById('btnDl');
+  const dlLabel    = document.getElementById('dlLabel');
+  const btnNew     = document.getElementById('btnNew');
+
+  let file = null, pollTimer = null;
+
+  // Drag & drop
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (f?.type === 'application/pdf') setFile(f);
+    else alert('Selecione apenas arquivos PDF.');
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+  removeFile.addEventListener('click', clearFile);
+
+  function setFile(f) {
+    file = f;
+    pillName.textContent = f.name;
+    pillSize.textContent = fmtBytes(f.size);
+    filePill.classList.add('show');
+    btnStart.disabled = false;
+  }
+  function clearFile() {
+    file = null; fileInput.value = '';
+    filePill.classList.remove('show');
+    btnStart.disabled = true;
+  }
+  function fmtBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1)+' KB';
+    return (b/1048576).toFixed(1)+' MB';
+  }
+
+  // Iniciar tradução
+  btnStart.addEventListener('click', async () => {
+    if (!file) return;
+
+    const opts = {
+      source_lang:       document.getElementById('srcLang').value,
+      target_lang:       document.getElementById('tgtLang').value,
+      engine:            document.getElementById('engine').value,
+      workers:           document.getElementById('workers').value,
+      page_start:        document.getElementById('pageStart').value,
+      page_end:          document.getElementById('pageEnd').value || '',
+      use_ocr:           document.getElementById('useOcr').checked,
+      save_original_pdf: document.getElementById('saveOrig').checked,
+      resume:            false,
+    };
+
+    formCard.style.display = 'none';
+    progressCard.classList.add('show');
+    resetProgress();
+    addLog('📤 Enviando arquivo…', 'linf');
+
+    const fd = new FormData();
+    fd.append('file', file);
+    Object.entries(opts).forEach(([k,v]) => fd.append(k, v));
+
+    try {
+      const res = await fetch(`${API}/translate`, { method:'POST', body:fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || res.statusText);
+      }
+      const { job_id } = await res.json();
+      addLog('🔄 Tradução iniciada…', 'linf');
+      poll(job_id, opts.target_lang);
+    } catch(e) {
+      setError(e.message);
+    }
+  });
+
+  // Polling de status
+  function poll(jobId, tgt) {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(async () => {
+      try {
+        const res  = await fetch(`${API}/status/${jobId}`);
+        const data = await res.json();
+        updateUI(data);
+        if (data.status === 'running')  poll(jobId, tgt);
+        else if (data.status === 'done') setDone(jobId, tgt, data);
+        else if (data.status === 'error') setError(data.error || 'Erro desconhecido');
+      } catch(e) { setError('Conexão perdida: ' + e.message); }
+    }, POLL_MS);
+  }
+
+  function updateUI(data) {
+    const done  = data.progress || 0;
+    const total = data.total    || 0;
+    const pct   = total > 0 ? Math.round(done/total*100) : 0;
+    barFill.style.width = pct + '%';
+    statPages.textContent = done;
+    statTotal.textContent = total || '–';
+    statPct.textContent   = pct + '%';
+    // Append only new log lines
+    const lines = data.log || [];
+    const cur   = logBox.querySelectorAll('.log-line').length;
+    lines.slice(cur).forEach(l => addLog(l));
+  }
+
+  function setDone(jobId, tgt, data) {
+    spinner.classList.add('done');
+    barFill.classList.add('done');
+    barFill.style.width = '100%';
+    progTitle.textContent = '✅ Tradução concluída!';
+    statPct.textContent = '100%';
+    const name = data.output_name || `traduzido_${tgt}.pdf`;
+    dlLabel.textContent = `Baixar ${name}`;
+    btnDl.href = `${API}/download/${jobId}`;
+    btnDl.download = name;
+    btnDl.classList.add('show');
+    btnNew.classList.add('show');
+  }
+
+  function setError(msg) {
+    clearTimeout(pollTimer);
+    spinner.classList.add('err');
+    barFill.classList.add('err');
+    progTitle.textContent = '❌ Erro na tradução';
+    addLog('❌ ' + msg + '\n\n💡 Dica: verifique se o backend está rodando:\n   python backend.py', 'lerr');
+    btnNew.classList.add('show');
+  }
+
+  function resetProgress() {
+    spinner.className = 'spinner';
+    barFill.className = 'bar-fill';
+    barFill.style.width = '0%';
+    progTitle.textContent = 'Iniciando tradução…';
+    statPages.textContent = '0';
+    statTotal.textContent = '–';
+    statPct.textContent   = '0%';
+    logBox.innerHTML = '';
+    btnDl.classList.remove('show');
+    btnNew.classList.remove('show');
+  }
+
+  function addLog(msg, cls='') {
+    const s = document.createElement('span');
+    s.className = 'log-line' + (cls ? ' '+cls : '');
+    s.textContent = msg;
+    logBox.appendChild(s);
+    logBox.appendChild(document.createElement('br'));
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  btnNew.addEventListener('click', () => {
+    clearTimeout(pollTimer); clearFile();
+    progressCard.classList.remove('show');
+    formCard.style.display = '';
+    window.scrollTo({ top:0, behavior:'smooth' });
+  });
+</script>
+</body>
+</html>
