@@ -251,10 +251,5 @@ def _sync_translate(job_id: str, job: TranslationJob):
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    print("\n" + "="*55)
-    print("  PDF Translator Pro — Backend")
-    print("="*55)
-    print("  Acesse: http://localhost:8000")
-    print("  Para parar: Ctrl+C")
-    print("="*55 + "\n")
-    uvicorn.run("backend:app", host="0.0.0.0", port=8000, reload=False)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("backend:app", host="0.0.0.0", port=port, reload=False)
